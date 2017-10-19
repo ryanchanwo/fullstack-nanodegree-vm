@@ -5,6 +5,11 @@
 -- results must be built procedurally and are time-sensitive. Perhaps matches could be
 -- time-stamped to rectify this limitation?
 
+-- Boilerplate to ensure we are setting-up the correct database.
+DROP DATABASE IF EXISTS tournament;
+CREATE DATABASE tournament;
+\c tournament
+
 -- All players registered to the tournament service.
 CREATE TABLE players (
     id   serial PRIMARY KEY,
@@ -19,6 +24,10 @@ CREATE TABLE tournaments (
     id           serial PRIMARY KEY,
     name         text NOT NULL
 );
+
+-- Create the default tournament for the sake of the tests.
+INSERT INTO tournaments (name)
+    VALUES ('default');
 
 -- Players in each tournament.
 CREATE TABLE tournament_players (
