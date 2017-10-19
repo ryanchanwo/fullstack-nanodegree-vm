@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# 
+#
 # tournament.py -- implementation of a Swiss-system tournament
 #
 import itertools
@@ -26,18 +26,19 @@ def deleteMatches():
     """Remove all the match records from the database."""
     with psycopg2.connect(_connection_name) as connection:
         cursor = connection.cursor()
-        cursor.execute("DELETE FROM match_results;")
-        cursor.execute("DELETE FROM matches;")
+        cursor.execute("TRUNCATE match_results CASCADE;")
+        cursor.execute("TRUNCATE matches CASCADE;")
 
 
 def deletePlayers():
     """Remove all the player records from the database."""
     with psycopg2.connect(_connection_name) as connection:
         cursor = connection.cursor()
-        # TODO: This seems a bit cumbersome, if the players are removed, we need
-        # to also remove their match_results. On deleting the results however, we
-        # also need to delete the matches for those results, or we are left with
-        # 'zombie' matches (that have no results).
+        # This is a bit cumbersome, if the players are removed, we need to also
+        # remove their match_results. On deleting the results however, we also
+        # need to delete the matches for those results, otherwise we are left
+        # with 'zombie' matches (that have no results).
+        # TODO: Improve this.
         cursor.execute("DELETE FROM tournament_players RETURNING player_id;")
         deleted_player_ids = cursor.fetchall()
 
@@ -54,10 +55,12 @@ DELETE FROM match_results
                 deleted_match_ids.append(match_id)
 
         if deleted_match_ids:
-            cursor.executemany("DELETE FROM matches WHERE id = %s;", deleted_match_ids)
+            cursor.executemany("DELETE FROM matches WHERE id = %s;",
+                               deleted_match_ids)
 
         if deleted_player_ids:
-            cursor.executemany("DELETE FROM players WHERE id = %s;", deleted_player_ids)
+            cursor.executemany("DELETE FROM players WHERE id = %s;",
+                               deleted_player_ids)
 
 
 def countPlayers():
@@ -85,9 +88,9 @@ def registerPlayer(name):
     Args:
       name: the player's full name (need not be unique).
     """
-    # FIXME: At the moment, we automatically enter all players into the 'default'
-    # tournament. Once the service has been extended to add tournaments, we can
-    # additionally enter players to specific tournaments.
+    # FIXME: At the moment, we automatically enter all players into the
+    # 'default' tournament. Once the service has been extended to add
+    # tournaments, we can additionally enter players to specific tournaments.
     with psycopg2.connect(_connection_name) as connection:
         cursor = connection.cursor()
         cursor.execute("""\
@@ -106,8 +109,8 @@ INSERT INTO tournament_players (player_id, tournament_id)
 def playerStandings():
     """Returns a list of the players and their win records, sorted by wins.
 
-    The first entry in the list should be the player in first place, or a player
-    tied for first place if there is currently a tie.
+    The first entry in the list should be the player in first place, or a
+    player tied for first place if there is currently a tie.
 
     Returns:
       A list of tuples, each of which contains (id, name, wins, matches):
@@ -194,13 +197,8 @@ def swissPairings():
 
     pairings = []
     for player_one, player_two in pairwise(standings):
-        player_one_id, player_one_name, _, _ = player_one
-        player_two_id, player_two_name, _, _ = player_two
-        pairings.append((
-            player_one_id,
-            player_one_name,
-            player_two_id,
-            player_two_name,
-        ))
+        # Each player in the standings are represented by a tuple of 4 values.
+        # The first two are the name and their id.
+        pairings.append(player_one[0:2] + player_two[0:2])
 
     return pairings
